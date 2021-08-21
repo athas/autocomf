@@ -9,7 +9,7 @@ export cyan=$'\e[0;36m'
 export white=$'\e[0;37m'
 export yellow=$'\e[0;33m'
 
-# AUTOCOMF USE fg=¤myForegroundColour
-fg=$green
+# AUTOCOMF USE fg=$¤myForegroundColour
+fg=$red
 
 PS1="\[$green\]\u@\h\$ \[\033[00m\]"

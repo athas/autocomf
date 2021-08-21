@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main (main) where
 
@@ -11,7 +12,9 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Void
 import System.Environment
-import Text.Megaparsec hiding (token)
+import System.Exit
+import System.IO
+import Text.Megaparsec hiding (match, token)
 import Text.Megaparsec.Char
 import Text.Regex.TDFA
 
@@ -20,10 +23,10 @@ newtype CommentMarker = LineComment T.Text
 
 type VarName = T.Text
 
-newtype VarDef = RegexVar Regex
+data VarDef = RegexVar T.Text Regex
 
 instance Show VarDef where
-  show (RegexVar _) = "RegexVar #<regex>"
+  show (RegexVar r _) = "RegexVar " <> T.unpack r
 
 type Directive = T.Text
 
@@ -40,7 +43,7 @@ findCommentMarker s
 
 findDirective :: CommentMarker -> T.Text -> Maybe (Directive, T.Text)
 findDirective (LineComment c) s = do
-  let (bef, s') =
+  let (_bef, s') =
         second (T.stripStart . T.drop (T.length c)) $ T.breakOn c s
   guard $ not $ T.null s'
   if "AUTOCOMF" `T.isPrefixOf` s'
@@ -64,8 +67,9 @@ pVarName = takeWhileP (Just "letter") isAlpha <* space
 pVarDef :: Parser VarDef
 pVarDef = do
   token "REGEX"
-  r <- makeRegexOptsM blankCompOpt defaultExecOpt . T.unpack =<< takeRest
-  pure $ RegexVar r
+  r <- takeRest
+  r' <- makeRegexOptsM blankCompOpt defaultExecOpt $ T.unpack r
+  pure $ RegexVar r r'
 
 pVarDir :: Parser (VarName, VarDef)
 pVarDir = do
@@ -79,11 +83,58 @@ findVars = foldMap varFromDir
     varFromDir dir =
       maybe mempty (uncurry M.singleton) $ parseMaybe pVarDir dir
 
+getVarValFromUser :: VarName -> VarDef -> IO T.Text
+getVarValFromUser v (RegexVar r regex) = do
+  T.putStrLn $ "Enter value for " <> v <> " (" <> r <> "):"
+  l <- T.getLine
+  if match regex l
+    then pure l
+    else do
+      T.putStrLn $ "No.  I already told you what was expected.  Try again."
+      getVarValFromUser v $ RegexVar r regex
+
+getVarValsFromUser :: M.Map VarName VarDef -> IO (M.Map VarName T.Text)
+getVarValsFromUser = fmap M.fromList . mapM f . M.toList
+  where
+    f (v, def) =
+      (v,) <$> getVarValFromUser v def
+
+pUseDir :: Parser T.Text
+pUseDir = do
+  token "#"
+  token "AUTOCOMF"
+  token "USE"
+  takeRest
+
+instantiateUseDir :: M.Map VarName T.Text -> T.Text -> T.Text
+instantiateUseDir vals = foldMap f . T.splitOn "¤"
+  where
+    f x = fromMaybe x $ M.lookup x vals
+
+indentAs :: T.Text -> T.Text -> T.Text
+indentAs x y = T.takeWhile isSpace x <> y
+
+substituteVars :: M.Map VarName T.Text -> T.Text -> T.Text
+substituteVars vals = T.unlines . recurse . T.lines
+  where
+    recurse [] = []
+    recurse (l1 : l2 : ls)
+      | Just usedir <- parseMaybe pUseDir l1 =
+        l1 : indentAs l2 (instantiateUseDir vals usedir) : ls
+    recurse (l : ls) =
+      l : recurse ls
+
 main :: IO ()
 main = do
-  input <- T.getContents
+  args <- getArgs
+  f <- case args of
+    [f] -> pure f
+    _ -> do
+      T.hPutStrLn stderr "Usage: autocomf <file>"
+      exitFailure
+  input <- T.readFile f
   let c = findCommentMarker input
       dirs = findDirectives c input
       vars = findVars dirs
-  print dirs
-  print vars
+  vals <- getVarValsFromUser vars
+  T.writeFile f $ substituteVars vals input
