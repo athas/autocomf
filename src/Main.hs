@@ -95,9 +95,9 @@ data Chunk
 
 type UseDir = [Chunk]
 
-pUseDir :: Parser UseDir
-pUseDir = do
-  token "#"
+pUseDir :: CommentMarker -> Parser UseDir
+pUseDir (LineComment c) = do
+  token c
   token "AUTOCOMF"
   token "USE"
   many pUseChunk
@@ -119,12 +119,12 @@ inferVarValues _ _ =
   -- Ambiguous; stupid user.
   mempty
 
-currentVarValues :: T.Text -> M.Map VarName VarVal
-currentVarValues = recurse . T.lines
+currentVarValues :: CommentMarker -> T.Text -> M.Map VarName VarVal
+currentVarValues c = recurse . T.lines
   where
     recurse [] = mempty
     recurse (l1 : l2 : ls)
-      | Just usedir <- parseMaybe pUseDir l1 =
+      | Just usedir <- parseMaybe (pUseDir c) l1 =
         inferVarValues usedir l2 <> recurse ls
     recurse (_ : ls) =
       recurse ls
@@ -160,12 +160,12 @@ instantiateUseDir vals (ChunkVar v : cs) =
 indentAs :: T.Text -> T.Text -> T.Text
 indentAs x y = T.takeWhile isSpace x <> y
 
-substituteVars :: M.Map VarName VarVal -> T.Text -> T.Text
-substituteVars vals = T.unlines . recurse . T.lines
+substituteVars :: CommentMarker -> M.Map VarName VarVal -> T.Text -> T.Text
+substituteVars c vals = T.unlines . recurse . T.lines
   where
     recurse [] = []
     recurse (l1 : l2 : ls)
-      | Just usedir <- parseMaybe pUseDir l1 =
+      | Just usedir <- parseMaybe (pUseDir c) l1 =
         l1 : indentAs l2 (instantiateUseDir vals usedir) : recurse ls
     recurse (l : ls) =
       l : recurse ls
@@ -183,7 +183,7 @@ main = do
       dirs = findDirectives c input
       vars = findVars dirs
 
-  maybe_vals <- getVarValsFromUser vars (currentVarValues input)
+  maybe_vals <- getVarValsFromUser vars (currentVarValues c input)
   case maybe_vals of
     Nothing -> exitFailure
-    Just vals -> T.writeFile f $ substituteVars vals input
+    Just vals -> T.writeFile f $ substituteVars c vals input
