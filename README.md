@@ -1,13 +1,13 @@
 # AUTOCOMF - Automatic Configuration from Comments
 
-**AUTOCOMF** is a programming language that presents a configuration UI
-based on annotations in a source file.  The configuration specified
-by the user is then incorporated by directly modifying the source
+**AUTOCOMF** is a programming language that presents a configuration
+UI based on annotations in a source file.  The configuration specified
+by the user is then incorporated by automatically modifying the source
 file.
 
-**AUTOCOMF** can be added seamlessly to *any* programming language or
-configuration language, since it is written exclusively within the
-comment syntax of the host language.
+**AUTOCOMF** can be used seamlessly with *any* programming language or
+configuration language, since it is written wholly within the comment
+syntax of the host language.
 
 **AUTOCOMF** has incorporates several attractive qualities:
 
