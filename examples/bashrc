@@ -10,9 +10,7 @@ export cyan=$'\e[0;36m'
 export white=$'\e[0;37m'
 export yellow=$'\e[0;33m'
 
-# AUTOCOMF USE uc=$¤myUserColour
-uc=$blue
-# AUTOCOMF USE hc=$¤myHostColour
-hc=$red
+# AUTOCOMF USE uc=$¤myUserColour¤; hc=$¤myHostColour¤
+uc=$purple; hc=$red
 
 PS1="\[$uc\]\u@\[$hc\]\h\$ \[\033[00m\]"

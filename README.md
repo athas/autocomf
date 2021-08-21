@@ -67,13 +67,13 @@ are then interpreted.  Each directive controls the following
 (presumably non-comment) line.  For example:
 
 ```
-# AUTOCOMF USE fg=$¤myForegroundColour
+# AUTOCOMF USE fg=$¤myForegroundColour¤
 fg=$red
 ```
 
 The line `fg=$red` will be replacd by `fg=$foo`, where `foo` is the
 value of the `myForegroundColour` specified by the user.  Note the use
-of the `¤` character to denote AUTOCOMF-level variables - because they
+of the `¤` character to bracket AUTOCOMF-level variables - because they
 are
 [language-unspecific](https://en.wikipedia.org/wiki/Currency_sign_(typography))!
 

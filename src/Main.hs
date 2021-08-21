@@ -28,6 +28,8 @@ type VarName = T.Text
 
 data VarDef = RegexVar T.Text Regex
 
+type VarVal = T.Text
+
 instance Show VarDef where
   show (RegexVar r _) = "RegexVar " <> T.unpack r
 
@@ -86,43 +88,85 @@ findVars = foldMap varFromDir
     varFromDir dir =
       maybe mempty (uncurry M.singleton) $ parseMaybe pVarDir dir
 
-wizardForVar :: (VarName, VarDef) -> Wizard Haskeline T.Text
-wizardForVar (v, RegexVar r regex) =
-  retryMsg scold . validator ok . fmap T.pack $ line prompt
+data Chunk
+  = ChunkVar VarName
+  | ChunkText T.Text
+  deriving (Show)
+
+type UseDir = [Chunk]
+
+pUseDir :: Parser UseDir
+pUseDir = do
+  token "#"
+  token "AUTOCOMF"
+  token "USE"
+  many pUseChunk
+  where
+    pUseChunk =
+      choice
+        [ ChunkVar <$> (chunk "¤" *> takeWhileP Nothing (/= '¤') <* chunk "¤"),
+          ChunkText <$> takeWhile1P Nothing (/= '¤')
+        ]
+
+inferVarValues :: [Chunk] -> T.Text -> M.Map VarName VarVal
+inferVarValues (ChunkText t : cs) y = inferVarValues cs $ T.drop (T.length t) y
+inferVarValues [ChunkVar v] y =
+  M.singleton v y
+inferVarValues (ChunkVar v : ChunkText t : cs) y =
+  let (v_val, y') = T.breakOn t y
+   in M.singleton v v_val <> inferVarValues (ChunkText t : cs) y'
+inferVarValues _ _ =
+  -- Ambiguous; stupid user.
+  mempty
+
+currentVarValues :: T.Text -> M.Map VarName VarVal
+currentVarValues = recurse . T.lines
+  where
+    recurse [] = mempty
+    recurse (l1 : l2 : ls)
+      | Just usedir <- parseMaybe pUseDir l1 =
+        inferVarValues usedir l2 <> recurse ls
+    recurse (_ : ls) =
+      recurse ls
+
+wizardForVar :: (VarName, VarDef) -> Maybe VarVal -> Wizard Haskeline T.Text
+wizardForVar (v, RegexVar r regex) maybe_curval =
+  retryMsg scold . validator ok . fmap T.pack $ case maybe_curval of
+    Nothing -> line prompt
+    Just curval -> linePrewritten prompt (T.unpack curval) mempty
   where
     scold = "No.  I already told you what was expected.  Try again."
     prompt = T.unpack $ v <> " (" <> r <> ")" <> ": "
     ok = match regex
 
-getVarValsFromUser :: M.Map VarName VarDef -> IO (Maybe (M.Map VarName T.Text))
-getVarValsFromUser m =
+getVarValsFromUser ::
+  M.Map VarName VarDef ->
+  M.Map VarName VarVal ->
+  IO (Maybe (M.Map VarName VarVal))
+getVarValsFromUser m curvals =
   runInputT defaultSettings (run $ haskeline $ fmap M.fromList . mapM f . M.toList $ m)
   where
     f (v, def) =
-      (v,) <$> wizardForVar (v, def)
+      (v,) <$> wizardForVar (v, def) (M.lookup v curvals)
 
-pUseDir :: Parser T.Text
-pUseDir = do
-  token "#"
-  token "AUTOCOMF"
-  token "USE"
-  takeRest
-
-instantiateUseDir :: M.Map VarName T.Text -> T.Text -> T.Text
-instantiateUseDir vals = foldMap f . T.splitOn "¤"
-  where
-    f x = fromMaybe x $ M.lookup x vals
+instantiateUseDir :: M.Map VarName VarVal -> [Chunk] -> T.Text
+instantiateUseDir _ [] =
+  mempty
+instantiateUseDir vals (ChunkText t : cs) =
+  t <> instantiateUseDir vals cs
+instantiateUseDir vals (ChunkVar v : cs) =
+  fromMaybe ("¤" <> v) (M.lookup v vals) <> instantiateUseDir vals cs
 
 indentAs :: T.Text -> T.Text -> T.Text
 indentAs x y = T.takeWhile isSpace x <> y
 
-substituteVars :: M.Map VarName T.Text -> T.Text -> T.Text
+substituteVars :: M.Map VarName VarVal -> T.Text -> T.Text
 substituteVars vals = T.unlines . recurse . T.lines
   where
     recurse [] = []
     recurse (l1 : l2 : ls)
       | Just usedir <- parseMaybe pUseDir l1 =
-        l1 : indentAs l2 (instantiateUseDir vals usedir) : ls
+        l1 : indentAs l2 (instantiateUseDir vals usedir) : recurse ls
     recurse (l : ls) =
       l : recurse ls
 
@@ -139,7 +183,7 @@ main = do
       dirs = findDirectives c input
       vars = findVars dirs
 
-  maybe_vals <- getVarValsFromUser vars
+  maybe_vals <- getVarValsFromUser vars (currentVarValues input)
   case maybe_vals of
     Nothing -> exitFailure
     Just vals -> T.writeFile f $ substituteVars vals input
