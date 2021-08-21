@@ -86,8 +86,9 @@ overwritten with the result.
 
 ## Compiling and using
 
-You'll need a Haskell setup (install from your package manager [or use
-ghcup](https://www.haskell.org/ghcup/)).  Then build with:
+You'll need a Haskell setup (install `ghc` and `cabal` from your
+package manager [or use ghcup](https://www.haskell.org/ghcup/)).  Then
+build with:
 
 ```
 $ cabal update
