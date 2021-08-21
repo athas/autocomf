@@ -11,6 +11,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Void
+import qualified System.Console.Readline as Readline
 import System.Environment
 import System.Exit
 import System.IO
@@ -86,11 +87,11 @@ findVars = foldMap varFromDir
 getVarValFromUser :: VarName -> VarDef -> IO T.Text
 getVarValFromUser v (RegexVar r regex) = do
   T.putStrLn $ "Enter value for " <> v <> " (" <> r <> "):"
-  l <- T.getLine
-  if match regex l
-    then pure l
-    else do
-      T.putStrLn $ "No.  I already told you what was expected.  Try again."
+  l' <- fmap T.pack <$> Readline.readline "> "
+  case fmap (\l -> (l, match regex l)) l' of
+    Just (l, True) -> pure l
+    _ -> do
+      T.putStrLn "No.  I already told you what was expected.  Try again."
       getVarValFromUser v $ RegexVar r regex
 
 getVarValsFromUser :: M.Map VarName VarDef -> IO (M.Map VarName T.Text)
