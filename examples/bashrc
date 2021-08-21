@@ -1,0 +1,15 @@
+# AUTOCOMF COMMENT LINE #
+# AUTOCOMF VAR myForegroundColour REGEX red|green|blue|purple|cyan|white|yellow
+
+export red=$'\e[0;31m'
+export green=$'\e[0;32m'
+export blue=$'\e[0;34m'
+export purple=$'\e[0;35m'
+export cyan=$'\e[0;36m'
+export white=$'\e[0;37m'
+export yellow=$'\e[0;33m'
+
+# AUTOCOMF USE fg=¤myForegroundColour
+fg=$green
+
+PS1="\[$green\]\u@\h\$ \[\033[00m\]"
