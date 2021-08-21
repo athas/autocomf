@@ -15,7 +15,8 @@ executable autocomf
                       regex-tdfa >=1.2,
                       containers,
                       megaparsec,
-                      readline
+                      wizards,
+                      haskeline
     hs-source-dirs:   src
     ghc-options: -Wall -Wcompat -Wredundant-constraints -Wincomplete-record-updates -Wmissing-export-lists
     default-language: Haskell2010

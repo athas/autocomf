@@ -11,7 +11,9 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Void
-import qualified System.Console.Readline as Readline
+import System.Console.Haskeline
+import System.Console.Wizard
+import System.Console.Wizard.Haskeline
 import System.Environment
 import System.Exit
 import System.IO
@@ -84,21 +86,20 @@ findVars = foldMap varFromDir
     varFromDir dir =
       maybe mempty (uncurry M.singleton) $ parseMaybe pVarDir dir
 
-getVarValFromUser :: VarName -> VarDef -> IO T.Text
-getVarValFromUser v (RegexVar r regex) = do
-  T.putStrLn $ "Enter value for " <> v <> " (" <> r <> "):"
-  l' <- fmap T.pack <$> Readline.readline "> "
-  case fmap (\l -> (l, match regex l)) l' of
-    Just (l, True) -> pure l
-    _ -> do
-      T.putStrLn "No.  I already told you what was expected.  Try again."
-      getVarValFromUser v $ RegexVar r regex
+wizardForVar :: (VarName, VarDef) -> Wizard Haskeline T.Text
+wizardForVar (v, RegexVar r regex) =
+  retryMsg scold . validator ok . fmap T.pack $ line prompt
+  where
+    scold = "No.  I already told you what was expected.  Try again."
+    prompt = T.unpack $ v <> " (" <> r <> ")" <> ": "
+    ok = match regex
 
-getVarValsFromUser :: M.Map VarName VarDef -> IO (M.Map VarName T.Text)
-getVarValsFromUser = fmap M.fromList . mapM f . M.toList
+getVarValsFromUser :: M.Map VarName VarDef -> IO (Maybe (M.Map VarName T.Text))
+getVarValsFromUser m =
+  runInputT defaultSettings (run $ haskeline $ fmap M.fromList . mapM f . M.toList $ m)
   where
     f (v, def) =
-      (v,) <$> getVarValFromUser v def
+      (v,) <$> wizardForVar (v, def)
 
 pUseDir :: Parser T.Text
 pUseDir = do
@@ -137,5 +138,8 @@ main = do
   let c = findCommentMarker input
       dirs = findDirectives c input
       vars = findVars dirs
-  vals <- getVarValsFromUser vars
-  T.writeFile f $ substituteVars vals input
+
+  maybe_vals <- getVarValsFromUser vars
+  case maybe_vals of
+    Nothing -> exitFailure
+    Just vals -> T.writeFile f $ substituteVars vals input
