@@ -22,7 +22,28 @@ comment syntax of the host language.
 * Named in honour of the universally loved
   [autoconf](https://www.gnu.org/software/autoconf/) system.
 
-**AUTOCOMF**
+**AUTOCOMF** is guaranteed free of defects, but user error is always a
+possibility.  In the best Unix tradition, **AUTOCONF** will
+irrevocably change the input file, without any backup!  Make sure you
+understand [the completely precise and unambiguous
+specification](https://github.com/athas/autocomf/blob/main/src/Main.hs)
+before running it on files you care about!
 
 **AUTOCOMF** was developed as a contribution to [Langjam
 #1](https://github.com/langjam/jam0001).
+
+## Usage
+
+You'll need a Haskell setup (install from your package manager [or use
+ghcup](https://www.haskell.org/ghcup/)).  Then build with:
+
+```
+$ cabal update
+$ cabal build
+```
+
+And run an example program with:
+
+```
+$ cabal run autocomf examples/bashrc
+```
