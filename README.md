@@ -71,7 +71,7 @@ are then interpreted.  Each directive controls the following
 fg=$red
 ```
 
-The line `fg=$red` will be replacd by `fg=$foo`, where `foo` is the
+The line `fg=$red` will be replaced by `fg=$foo`, where `foo` is the
 value of the `myForegroundColour` specified by the user.  Note the use
 of the `¤` character to bracket AUTOCOMF-level variables - because they
 are
