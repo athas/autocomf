@@ -2,10 +2,10 @@
 // suckless would love AUTOCOMF, no doubt.
 // AUTOCOMF COMMENT LINE //
 
-// AUTOCOMF VAR borderpx REGEX [1-9][0-9]*
-// AUTOCOMF VAR snap REGEX [1-9][0-9]*
-// AUTOCOMF VAR showbar REGEX 0|1
-// AUTOCOMF VAR topbar REGEX 0|1
+// AUTOCOMF VAR borderpx REGEX ^[1-9][0-9]*$
+// AUTOCOMF VAR snap REGEX ^[1-9][0-9]*$
+// AUTOCOMF VAR showbar REGEX ^(0|1)$
+// AUTOCOMF VAR topbar REGEX ^(0|1)$
 
 /* See LICENSE file for copyright and license details. */
 

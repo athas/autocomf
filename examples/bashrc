@@ -1,6 +1,6 @@
 # AUTOCOMF COMMENT LINE #
-# AUTOCOMF VAR myUserColour REGEX red|green|blue|purple|cyan|white|yellow
-# AUTOCOMF VAR myHostColour REGEX red|green|blue|purple|cyan|white|yellow
+# AUTOCOMF VAR myUserColour REGEX ^(red|green|blue|purple|cyan|white|yellow)$
+# AUTOCOMF VAR myHostColour REGEX ^(red|green|blue|purple|cyan|white|yellow)$
 
 export red=$'\e[0;31m'
 export green=$'\e[0;32m'
